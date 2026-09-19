@@ -4,6 +4,13 @@ import {
   ArrowRight, Bell, Check, ChevronDown, Clock3, Heart, Leaf, MapPin,
   Search, ShoppingBag, Sparkles, X
 } from 'lucide-react'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { AuthProvider } from './context/AuthContext'
+import { ProtectedRoute } from './components/ProtectedRoute'
+import { Landing } from './pages/Landing'
+import { Login } from './pages/Login'
+import { Register } from './pages/Register'
+import { Dashboard } from './pages/Dashboard'
 import './styles.css'
 import { getAvailableOffers } from './services/offers'
 
