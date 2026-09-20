@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { ArrowRight, Clock3, Leaf, MapPin, Plus, Trash2 } from 'lucide-react'
-import { Logo } from '../components/Logo'
+import { DashNav } from '../components/DashNav'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 
@@ -19,8 +18,7 @@ function formatDateTime(value, fallback) {
 }
 
 export function Dashboard() {
-  const { store, user, signOut, refreshStore } = useAuth()
-  const navigate = useNavigate()
+  const { store, refreshStore } = useAuth()
   const [offers, setOffers] = useState([])
   const [form, setForm] = useState(emptyOffer)
   const [error, setError] = useState('')
@@ -98,22 +96,9 @@ export function Dashboard() {
     await loadOffers()
   }
 
-  const logout = async () => {
-    await signOut()
-    navigate('/')
-  }
-
   return (
     <div className="dash-shell">
-      <header>
-        <nav>
-          <Logo to="/app" />
-          <div className="nav-actions">
-            <span className="business-chip">{store?.name || user?.email}</span>
-            <button className="ghost-link" type="button" onClick={logout}>Log out</button>
-          </div>
-        </nav>
-      </header>
+      <DashNav />
 
       <main className="dash-main">
         <section className="dash-intro">
@@ -142,7 +127,7 @@ export function Dashboard() {
             </label>
             <label>
               Description
-              <textarea value={form.description} onChange={update('description')} rows={3} placeholder="A surprise mix of today’s leftover bakes." required />
+              <textarea value={form.description} onChange={update('description')} rows={3} placeholder="A mix of today’s leftover bakes." required />
             </label>
             <div className="form-grid">
               <label>
@@ -172,7 +157,7 @@ export function Dashboard() {
             ) : offers.length === 0 ? (
               <div className="empty-state">
                 <h3>No offers yet</h3>
-                <p>Post your first leftover bag to go live in the iOS app.</p>
+                <p>Post your first leftover offer to go live in the iOS app.</p>
               </div>
             ) : (
               <div className="dash-offers">
@@ -195,7 +180,7 @@ export function Dashboard() {
                       <div className="shop-row">
                         <span>Posted {formatDateTime(offer.posted_time, 'recently')}</span>
                       </div>
-                      <h3>{offer.offer_name || 'Surprise food offer'}</h3>
+                      <h3>{offer.offer_name || 'Food offer'}</h3>
                       <p>{offer.offer_description || (offer.offer_completed ? 'This offer is complete.' : 'Available for pickup.')}</p>
                       <div className="meta-row">
                         <span><Clock3 size={15} />Starts {formatDateTime(offer.offer_start_time, 'TBA')}</span>

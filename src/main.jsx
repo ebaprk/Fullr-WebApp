@@ -12,6 +12,7 @@ import { Login } from './pages/Login'
 import { Register } from './pages/Register'
 import { AuthCallback } from './pages/AuthCallback'
 import { Dashboard } from './pages/Dashboard'
+import { Settings } from './pages/Settings'
 import './styles.css'
 import { getAvailableOffers } from './services/offers'
 
@@ -29,7 +30,7 @@ function toDisplayOffer(offer) {
   return {
     id: offer.offer_id,
     shop: store.name ?? 'Local partner',
-    item: offer.offer_name ?? 'Surprise food offer',
+    item: offer.offer_name ?? 'Food offer',
     desc: offer.offer_description ?? store.description ?? 'A surplus-food offer ready for pickup.',
     address: store.address ?? 'Address available at pickup',
     time: formatOfferEndTime(offer.offer_end_time),
@@ -178,7 +179,7 @@ function App() {
         <section className="how-section" id="how">
           <div className="how-intro"><span className="eyebrow">Three easy steps</span><h2>Save food without<br/>the extra effort.</h2><p>Less waste, more taste. Fullr makes every pickup feel good.</p></div>
           <div className="steps">
-            <div className="step"><span>01</span><div className="step-icon"><Search/></div><h3>Discover</h3><p>Browse surprise bags from great local spots nearby.</p></div>
+            <div className="step"><span>01</span><div className="step-icon"><Search/></div><h3>Discover</h3><p>Browse live offers from great local spots nearby.</p></div>
             <div className="step"><span>02</span><div className="step-icon"><ShoppingBag/></div><h3>Reserve</h3><p>Claim your favorite find in a few quick taps.</p></div>
             <div className="step"><span>03</span><div className="step-icon"><MapPin/></div><h3>Pick up</h3><p>Stop by in the pickup window and enjoy your rescue.</p></div>
           </div>
@@ -209,6 +210,14 @@ createRoot(document.getElementById('root')).render(
           element={(
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="/app/settings"
+          element={(
+            <ProtectedRoute>
+              <Settings />
             </ProtectedRoute>
           )}
         />

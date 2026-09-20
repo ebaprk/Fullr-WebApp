@@ -70,7 +70,7 @@ export function Landing() {
           <i />
           <div><strong>Live</strong><span>offers in the iOS app</span></div>
           <i />
-          <div><strong>0</strong><span>waste from unsold bags</span></div>
+          <div><strong>0</strong><span>waste from unsold food</span></div>
           <i />
           <div><strong>You</strong><span>control every listing</span></div>
         </section>

@@ -130,9 +130,9 @@ alter table public."Offers" alter column offer_id set default gen_random_uuid();
 alter table public."Offers" add column if not exists offer_name text;
 alter table public."Offers" add column if not exists offer_start_time timestamptz;
 update public."Offers"
-set offer_name = 'Surprise food offer'
+set offer_name = 'Food offer'
 where offer_name is null;
-alter table public."Offers" alter column offer_name set default 'Surprise food offer';
+alter table public."Offers" alter column offer_name set default 'Food offer';
 alter table public."Offers" alter column offer_name set not null;
 alter table public."Offers" alter column posted_time set default now();
 alter table public."Offers" alter column offer_completed set default false;
@@ -325,3 +325,43 @@ grant select, update on public."Users" to authenticated;
 grant select on public."Offers" to anon, authenticated;
 grant insert, update, delete on public."Offers" to authenticated;
 grant execute on function public.increment_offer_views(uuid) to anon, authenticated;
+
+insert into storage.buckets (id, name, public)
+values ('store-images', 'store-images', true)
+on conflict (id) do nothing;
+
+drop policy if exists "Public can view store images" on storage.objects;
+create policy "Public can view store images"
+  on storage.objects for select
+  using (bucket_id = 'store-images');
+
+drop policy if exists "Store owners can upload store images" on storage.objects;
+create policy "Store owners can upload store images"
+  on storage.objects for insert
+  to authenticated
+  with check (
+    bucket_id = 'store-images'
+    and split_part(name, '/', 1) = auth.uid()::text
+  );
+
+drop policy if exists "Store owners can update store images" on storage.objects;
+create policy "Store owners can update store images"
+  on storage.objects for update
+  to authenticated
+  using (
+    bucket_id = 'store-images'
+    and split_part(name, '/', 1) = auth.uid()::text
+  )
+  with check (
+    bucket_id = 'store-images'
+    and split_part(name, '/', 1) = auth.uid()::text
+  );
+
+drop policy if exists "Store owners can delete store images" on storage.objects;
+create policy "Store owners can delete store images"
+  on storage.objects for delete
+  to authenticated
+  using (
+    bucket_id = 'store-images'
+    and split_part(name, '/', 1) = auth.uid()::text
+  );
