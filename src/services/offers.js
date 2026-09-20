@@ -3,6 +3,7 @@ import { isSupabaseConfigured, supabase } from './supabase'
 const offerColumns = `
   offer_id,
   offer_name,
+  offer_price,
   posted_time,
   offer_start_time,
   offer_end_time,

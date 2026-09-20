@@ -31,6 +31,7 @@ function toDisplayOffer(offer) {
     id: offer.offer_id,
     shop: store.name ?? 'Local partner',
     item: offer.offer_name ?? 'Food offer',
+    price: offer.offer_price == null ? null : Number(offer.offer_price),
     desc: offer.offer_description ?? store.description ?? 'A surplus-food offer ready for pickup.',
     address: store.address ?? 'Address available at pickup',
     time: formatOfferEndTime(offer.offer_end_time),
@@ -60,7 +61,7 @@ function DealCard({ deal, favorite, onFavorite, onReserve }) {
         <p>{deal.desc}</p>
         <div className="meta-row"><span><MapPin size={15} />{deal.address}</span><span><Clock3 size={15} />{deal.time}</span></div>
         <div className="price-row">
-          <div><strong>Available now</strong></div>
+          <div><strong>{deal.price == null ? 'Available now' : `$${deal.price.toFixed(2)}`}</strong></div>
           <button onClick={() => onReserve(deal)}>Reserve <ArrowRight size={15} /></button>
         </div>
       </div>

@@ -125,6 +125,7 @@ alter table public."Stores" alter column owner_id set not null;
 create table if not exists public."Offers" (
   offer_id uuid primary key default gen_random_uuid(),
   offer_name text not null,
+  offer_price numeric(10, 2) check (offer_price is null or offer_price >= 0),
   posted_time timestamptz not null default now(),
   offer_start_time timestamptz,
   offer_end_time timestamptz,
@@ -138,6 +139,7 @@ create table if not exists public."Offers" (
 -- Repair defaults left behind by earlier versions of the Offers schema.
 alter table public."Offers" alter column offer_id set default gen_random_uuid();
 alter table public."Offers" add column if not exists offer_name text;
+alter table public."Offers" add column if not exists offer_price numeric(10, 2);
 alter table public."Offers" add column if not exists offer_start_time timestamptz;
 update public."Offers"
 set offer_name = 'Food offer'

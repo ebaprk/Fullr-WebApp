@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase'
 const emptyOffer = {
   name: '',
   description: '',
+  price: '',
   startTime: '',
   endTime: ''
 }
@@ -57,11 +58,17 @@ export function Dashboard() {
       setError('Your store profile is still loading. Please try again in a moment.')
       return
     }
+    const price = Number.parseFloat(form.price)
+    if (!Number.isFinite(price) || price < 0) {
+      setError('Enter a valid price of zero or more.')
+      return
+    }
     setSaving(true)
     const { error: insertError } = await supabase.from('Offers').insert({
       store_id: store.id,
       offer_name: form.name.trim(),
       offer_description: form.description.trim(),
+      offer_price: price.toFixed(2),
       offer_start_time: form.startTime ? new Date(form.startTime).toISOString() : null,
       offer_end_time: form.endTime ? new Date(form.endTime).toISOString() : null,
       posted_time: new Date().toISOString(),
@@ -129,6 +136,10 @@ export function Dashboard() {
               Description
               <textarea value={form.description} onChange={update('description')} rows={3} placeholder="A mix of today’s leftover bakes." required />
             </label>
+            <label>
+              Price
+              <input type="number" min="0" step="0.01" inputMode="decimal" value={form.price} onChange={update('price')} placeholder="4.50" required />
+            </label>
             <div className="form-grid">
               <label>
                 Offer starts
@@ -188,6 +199,7 @@ export function Dashboard() {
                         <span><MapPin size={15} />{store?.address || 'Pickup at your shop'}</span>
                       </div>
                       <div className="price-row">
+                        <strong>{offer.offer_price == null ? 'Price unavailable' : `$${Number(offer.offer_price).toFixed(2)}`}</strong>
                         <button type="button" onClick={() => toggleActive(offer)}>
                           {offer.offer_completed ? 'Reopen' : 'Mark complete'}
                         </button>
