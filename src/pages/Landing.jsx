@@ -19,11 +19,6 @@ export function Landing() {
       <header>
         <nav>
           <Logo />
-          <div className="nav-links">
-            <a href="#how">How it works</a>
-            <a href="#impact">Why Fullr</a>
-            <a href="#join">For businesses</a>
-          </div>
           <div className="nav-actions">
             <Link to="/login" className="ghost-link">Log in</Link>
             <Link to="/register" className="nav-cta">Become a partner</Link>
@@ -129,7 +124,6 @@ export function Landing() {
         <div className="footer-links">
           <Link to="/register">Become a partner</Link>
           <Link to="/login">Business login</Link>
-          <a href="#how">How it works</a>
         </div>
         <small>© 2026 Fullr, Inc. Made with care for our planet.</small>
       </footer>
