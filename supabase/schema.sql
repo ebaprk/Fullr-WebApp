@@ -1,6 +1,7 @@
 -- Fullr web schema: business-owner registrations create a Users profile and
--- a linked store. This repository does not create or manage mobile/student
--- profiles; run this in the Supabase SQL Editor.
+-- a linked store. Student-profile provisioning remains owned by the mobile
+-- app; this schema declares the shared Student table and its access policies.
+-- Run this in the Supabase SQL Editor.
 
 do $$
 begin
@@ -22,6 +23,14 @@ create table if not exists public."Users" (
   registered_at timestamptz not null default now(),
   name text,
   image text
+);
+
+create table if not exists public."Student" (
+  student_id uuid primary key,
+  registered_at timestamptz,
+  first_name text,
+  last_name text,
+  email text
 );
 
 create table if not exists public."Stores" (
@@ -132,7 +141,8 @@ create table if not exists public."Offers" (
   offer_completed boolean not null default false,
   offer_description text,
   store_id uuid references public."Stores" (id) on delete cascade,
-  views bigint not null default 0
+  views bigint not null default 0,
+  claimed_user_ids uuid[]
 );
 
 -- create table if not exists does not add defaults to an existing table.
@@ -141,6 +151,7 @@ alter table public."Offers" alter column offer_id set default gen_random_uuid();
 alter table public."Offers" add column if not exists offer_name text;
 alter table public."Offers" add column if not exists offer_price numeric(10, 2);
 alter table public."Offers" add column if not exists offer_start_time timestamptz;
+alter table public."Offers" add column if not exists claimed_user_ids uuid[];
 update public."Offers"
 set offer_name = 'Food offer'
 where offer_name is null;
@@ -234,6 +245,7 @@ where u.raw_user_meta_data->>'account_type' = 'store'
 
 alter table public."Stores" enable row level security;
 alter table public."Users" enable row level security;
+alter table public."Student" enable row level security;
 alter table public."Offers" enable row level security;
 
 drop policy if exists "Public can read stores" on public."Stores";
@@ -266,6 +278,17 @@ create policy "Users can update own user profile"
   on public."Users" for update
   using (auth.uid() = id)
   with check (auth.uid() = id);
+
+drop policy if exists "Students can read own student profile" on public."Student";
+create policy "Students can read own student profile"
+  on public."Student" for select
+  using (auth.uid() = student_id);
+
+drop policy if exists "Students can update own student profile" on public."Student";
+create policy "Students can update own student profile"
+  on public."Student" for update
+  using (auth.uid() = student_id)
+  with check (auth.uid() = student_id);
 
 drop policy if exists "Anyone can read active offers" on public."Offers";
 create policy "Anyone can read active offers"
@@ -344,6 +367,7 @@ grant usage on schema public to anon, authenticated;
 grant select on public."Stores" to anon, authenticated;
 grant insert, update on public."Stores" to authenticated;
 grant select, update on public."Users" to authenticated;
+grant select, update on public."Student" to authenticated;
 grant select on public."Offers" to anon, authenticated;
 grant insert, update, delete on public."Offers" to authenticated;
 grant execute on function public.increment_offer_views(uuid) to anon, authenticated;
