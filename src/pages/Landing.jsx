@@ -61,8 +61,6 @@ export function Landing() {
         </section>
 
         <section className="stats-strip" id="impact">
-          <div><strong>72%</strong><span>average savings</span></div>
-          <i />
           <div><strong>Live</strong><span>offers in the iOS app</span></div>
           <i />
           <div><strong>0</strong><span>waste from unsold food</span></div>
