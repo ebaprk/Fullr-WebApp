@@ -16,15 +16,14 @@ export function DashNav() {
     <header>
       <nav>
         <Logo to="/app" />
-        <div className="nav-links dash-nav-links">
-          <NavLink to="/app" end>Offers</NavLink>
-          <NavLink to="/app/settings">Settings</NavLink>
-        </div>
         <div className="nav-actions">
+          <NavLink to="/app" end className="dash-nav-link">Offers</NavLink>
+          <NavLink to="/app/settings">
           <span className="business-chip">
             {store?.image ? <img src={store.image} alt="" /> : null}
-            {store?.name || user?.email}
+            <span className="business-chip-name">{store?.name || user?.email}</span>
           </span>
+          </NavLink>
           <button className="ghost-link" type="button" onClick={logout}>Log out</button>
         </div>
       </nav>
