@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@aashari/nodejs-geocoding": "^2.7.2",
     "@supabase/supabase-js": "^2.116.0",
     "@vitejs/plugin-react": "latest",
     "lucide-react": "latest",

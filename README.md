@@ -13,6 +13,12 @@ npm run dev
 
 Build for production with `npm run build`.
 
+## Supabase data model
+
+- `Users` has one profile row for each Supabase Auth account.
+- `Stores.owner_id` references `Users.id`; the store ID is a separate UUID.
+- `Offers.store_id` references `Stores.id`.
+
 ## Supabase offers
 
 The offer feed is loaded from `Offers` and associated with `Stores` through

@@ -1,10 +1,18 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
-import { ArrowRight, Leaf, MapPin, ShoppingBag, Store, Users } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ArrowRight, Leaf, MapPin, ShoppingBag, Store, UserCircle2, Users } from 'lucide-react'
 import { Logo } from '../components/Logo'
 import { ConfigBanner } from '../components/ConfigBanner'
+import { useAuth } from '../context/AuthContext'
 
 export function Landing() {
+  const { session } = useAuth()
+  const navigate = useNavigate()
+
+  const goToAccount = () => {
+    navigate(session ? '/app' : '/login')
+  }
+
   return (
     <div className="app-shell">
       <ConfigBanner />
@@ -19,6 +27,9 @@ export function Landing() {
           <div className="nav-actions">
             <Link to="/login" className="ghost-link">Log in</Link>
             <Link to="/register" className="nav-cta">Become a partner</Link>
+            <button type="button" className="avatar profile-button" onClick={goToAccount} aria-label={session ? 'Go to your account' : 'Go to login or sign up'}>
+              <UserCircle2 size={20} strokeWidth={1.9} />
+            </button>
           </div>
         </nav>
       </header>
@@ -49,7 +60,7 @@ export function Landing() {
             <div className="floating-card fc-bottom">
               <span className="tiny-badge">Tonight</span>
               <strong>Post in two minutes</strong>
-              <small>price, quantity, pickup window</small>
+              <small>description and pickup end time</small>
             </div>
           </div>
         </section>
@@ -81,7 +92,7 @@ export function Landing() {
               <span>02</span>
               <div className="step-icon"><ShoppingBag /></div>
               <h3>Post an offer</h3>
-              <p>Add tonight’s leftover bags, price, and pickup window.</p>
+              <p>Add a description and pickup end time for tonight’s surplus.</p>
             </div>
             <div className="step">
               <span>03</span>

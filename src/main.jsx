@@ -10,6 +10,7 @@ import { ProtectedRoute } from './components/ProtectedRoute'
 import { Landing } from './pages/Landing'
 import { Login } from './pages/Login'
 import { Register } from './pages/Register'
+import { AuthCallback } from './pages/AuthCallback'
 import { Dashboard } from './pages/Dashboard'
 import './styles.css'
 import { getAvailableOffers } from './services/offers'
@@ -28,8 +29,8 @@ function toDisplayOffer(offer) {
   return {
     id: offer.offer_id,
     shop: store.name ?? 'Local partner',
-    item: offer.offer_description ?? 'Surprise food offer',
-    desc: store.description ?? 'A surplus-food offer ready for pickup.',
+    item: offer.offer_name ?? 'Surprise food offer',
+    desc: offer.offer_description ?? store.description ?? 'A surplus-food offer ready for pickup.',
     address: store.address ?? 'Address available at pickup',
     time: formatOfferEndTime(offer.offer_end_time),
     views: Number(offer.views ?? 0),
@@ -195,4 +196,24 @@ function App() {
   )
 }
 
-createRoot(document.getElementById('root')).render(<App />)
+createRoot(document.getElementById('root')).render(
+  <BrowserRouter>
+    <AuthProvider>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route
+          path="/app"
+          element={(
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          )}
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </AuthProvider>
+  </BrowserRouter>
+)

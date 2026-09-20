@@ -2,7 +2,9 @@ import { isSupabaseConfigured, supabase } from './supabase'
 
 const offerColumns = `
   offer_id,
+  offer_name,
   posted_time,
+  offer_start_time,
   offer_end_time,
   offer_completed,
   offer_description,
@@ -33,15 +35,17 @@ async function attachStores(offers) {
   return offers.map(offer => ({ ...offer, store: storesById.get(offer.store_id) ?? null }))
 }
 
-/** Returns incomplete offers that have not ended, newest first. */
+/** Returns incomplete offers that are within their availability window. */
 export async function getAvailableOffers() {
   requireConfiguration()
 
+  const now = new Date().toISOString()
   const { data, error } = await supabase
     .from('Offers')
     .select(offerColumns)
     .eq('offer_completed', false)
-    .gte('offer_end_time', new Date().toISOString())
+    .or(`offer_start_time.is.null,offer_start_time.lte.${now}`)
+    .gte('offer_end_time', now)
     .order('posted_time', { ascending: false })
 
   if (error) throw error
@@ -62,17 +66,13 @@ export async function getOffer(offerId) {
   return (await attachStores([data]))[0]
 }
 
-/** Increments the display counter for an offer. */
-export async function incrementOfferViews(offerId, currentViews = 0) {
+/** Increments the display counter without granting public table updates. */
+export async function incrementOfferViews(offerId) {
   requireConfiguration()
 
   const { data, error } = await supabase
-    .from('Offers')
-    .update({ views: Number(currentViews) + 1 })
-    .eq('offer_id', offerId)
-    .select('offer_id, views')
-    .single()
+    .rpc('increment_offer_views', { target_offer_id: offerId })
 
   if (error) throw error
-  return data
+  return { offer_id: offerId, views: data }
 }

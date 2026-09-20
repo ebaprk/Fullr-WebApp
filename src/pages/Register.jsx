@@ -4,8 +4,8 @@ import { ArrowRight } from 'lucide-react'
 import { Logo } from '../components/Logo'
 import { ConfigBanner } from '../components/ConfigBanner'
 import { useAuth } from '../context/AuthContext'
+const categories = ['Pantry', 'Business', 'Campus', 'Restaurant']
 
-const categories = ['Bakery', 'Café', 'Restaurant', 'Grocery', 'Other']
 
 export function Register() {
   const { configured, session, signUp } = useAuth()
@@ -14,14 +14,15 @@ export function Register() {
     name: '',
     email: '',
     password: '',
-    category: 'Café',
+    category: 'Business',
     address: '',
-    city: '',
-    phone: ''
+    description: '',
+    image: ''
   })
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const [submitting, setSubmitting] = useState(false)
+
 
   if (session) return <Navigate to="/app" replace />
 
@@ -32,21 +33,28 @@ export function Register() {
     setError('')
     setInfo('')
     if (!configured) {
-      setError('Supabase is not configured yet.')
+      setError('Supabase is not configured yet. Add both the project URL and publishable/anon key to .env.local, then restart the app.')
       return
     }
     setSubmitting(true)
-    const { data, error: signUpError } = await signUp(form.email, form.password, form)
-    setSubmitting(false)
-    if (signUpError) {
-      setError(signUpError.message)
-      return
+
+    try {
+      const { data, error: signUpError } = await signUp(form.email, form.password, form)
+
+      if (signUpError) {
+        setError(signUpError.message)
+        return
+      }
+
+      if (!data.session) {
+        setInfo('Account created. Check your email to confirm, then log in.')
+        return
+      }
+
+      navigate('/app')
+    } finally {
+      setSubmitting(false)
     }
-    if (!data.session) {
-      setInfo('Account created. Check your email to confirm, then log in.')
-      return
-    }
-    navigate('/app')
   }
 
   return (
@@ -86,13 +94,13 @@ export function Register() {
               Address
               <input value={form.address} onChange={update('address')} placeholder="123 College Ave" />
             </label>
-            <label>
-              City
-              <input value={form.city} onChange={update('city')} placeholder="Campus town" />
+            <label className="span-2">
+              Store description
+              <textarea value={form.description} onChange={update('description')} rows={3} placeholder="Tell students what your store offers." />
             </label>
             <label className="span-2">
-              Phone
-              <input value={form.phone} onChange={update('phone')} placeholder="Optional" />
+              Image URL
+              <input type="url" value={form.image} onChange={update('image')} placeholder="https://…" />
             </label>
           </div>
           {error && <p className="form-error">{error}</p>}

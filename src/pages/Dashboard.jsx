@@ -5,30 +5,21 @@ import { Logo } from '../components/Logo'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 
-const categories = ['Meals', 'Bakery', 'Groceries', 'Drinks', 'Other']
-
 const emptyOffer = {
-  title: '',
+  name: '',
   description: '',
-  category: 'Meals',
-  price: '',
-  original_price: '',
-  quantity: 1,
-  pickup_start: '',
-  pickup_end: '',
-  image_url: ''
+  startTime: '',
+  endTime: ''
 }
 
-function formatWindow(start, end) {
-  if (!start && !end) return 'Pickup window not set'
+function formatDateTime(value, fallback) {
+  if (!value) return fallback
   const options = { hour: 'numeric', minute: '2-digit' }
-  const startLabel = start ? new Date(start).toLocaleTimeString([], options) : 'Open'
-  const endLabel = end ? new Date(end).toLocaleTimeString([], options) : 'Close'
-  return `${startLabel}–${endLabel}`
+  return new Date(value).toLocaleString([], options)
 }
 
 export function Dashboard() {
-  const { business, user, signOut, refreshBusiness } = useAuth()
+  const { store, user, signOut, refreshStore } = useAuth()
   const navigate = useNavigate()
   const [offers, setOffers] = useState([])
   const [form, setForm] = useState(emptyOffer)
@@ -37,41 +28,47 @@ export function Dashboard() {
   const [loadingOffers, setLoadingOffers] = useState(true)
 
   const loadOffers = async () => {
-    if (!user) return
+    if (!store?.id) {
+      setOffers([])
+      setLoadingOffers(false)
+      return
+    }
     setLoadingOffers(true)
     const { data, error: loadError } = await supabase
-      .from('offers')
+      .from('Offers')
       .select('*')
-      .eq('business_id', user.id)
-      .order('created_at', { ascending: false })
-    if (!loadError) setOffers(data ?? [])
+      .eq('store_id', store.id)
+      .order('posted_time', { ascending: false })
+    if (loadError) setError(loadError.message)
+    else setOffers(data ?? [])
     setLoadingOffers(false)
   }
 
   useEffect(() => {
     loadOffers()
-  }, [user])
+  }, [store?.id])
 
-  const liveCount = useMemo(() => offers.filter((offer) => offer.is_active && offer.quantity > 0).length, [offers])
+  const liveCount = useMemo(() => offers.filter((offer) => !offer.offer_completed).length, [offers])
 
   const update = (field) => (event) => setForm((prev) => ({ ...prev, [field]: event.target.value }))
 
   const onCreate = async (event) => {
     event.preventDefault()
     setError('')
+    if (!store?.id) {
+      setError('Your store profile is still loading. Please try again in a moment.')
+      return
+    }
     setSaving(true)
-    const { error: insertError } = await supabase.from('offers').insert({
-      business_id: user.id,
-      title: form.title.trim(),
-      description: form.description.trim(),
-      category: form.category,
-      price: Number(form.price),
-      original_price: form.original_price ? Number(form.original_price) : null,
-      quantity: Number(form.quantity),
-      pickup_start: form.pickup_start ? new Date(form.pickup_start).toISOString() : null,
-      pickup_end: form.pickup_end ? new Date(form.pickup_end).toISOString() : null,
-      image_url: form.image_url.trim() || null,
-      is_active: true
+    const { error: insertError } = await supabase.from('Offers').insert({
+      store_id: store.id,
+      offer_name: form.name.trim(),
+      offer_description: form.description.trim(),
+      offer_start_time: form.startTime ? new Date(form.startTime).toISOString() : null,
+      offer_end_time: form.endTime ? new Date(form.endTime).toISOString() : null,
+      posted_time: new Date().toISOString(),
+      offer_completed: false,
+      views: 0
     })
     setSaving(false)
     if (insertError) {
@@ -80,16 +77,24 @@ export function Dashboard() {
     }
     setForm(emptyOffer)
     await loadOffers()
-    await refreshBusiness()
+    await refreshStore()
   }
 
   const toggleActive = async (offer) => {
-    await supabase.from('offers').update({ is_active: !offer.is_active }).eq('id', offer.id)
+    const { error: updateError } = await supabase
+      .from('Offers')
+      .update({ offer_completed: !offer.offer_completed })
+      .eq('offer_id', offer.offer_id)
+    if (updateError) setError(updateError.message)
     await loadOffers()
   }
 
   const removeOffer = async (offer) => {
-    await supabase.from('offers').delete().eq('id', offer.id)
+    const { error: deleteError } = await supabase
+      .from('Offers')
+      .delete()
+      .eq('offer_id', offer.offer_id)
+    if (deleteError) setError(deleteError.message)
     await loadOffers()
   }
 
@@ -104,7 +109,7 @@ export function Dashboard() {
         <nav>
           <Logo to="/app" />
           <div className="nav-actions">
-            <span className="business-chip">{business?.name || user?.email}</span>
+            <span className="business-chip">{store?.name || user?.email}</span>
             <button className="ghost-link" type="button" onClick={logout}>Log out</button>
           </div>
         </nav>
@@ -132,45 +137,23 @@ export function Dashboard() {
               </div>
             </div>
             <label>
-              Offer title
-              <input value={form.title} onChange={update('title')} placeholder="Sunset pastry box" required />
+              Offer name
+              <input value={form.name} onChange={update('name')} placeholder="Sunset pastry box" required />
             </label>
             <label>
               Description
-              <textarea value={form.description} onChange={update('description')} rows={3} placeholder="A surprise mix of today’s leftover bakes." />
+              <textarea value={form.description} onChange={update('description')} rows={3} placeholder="A surprise mix of today’s leftover bakes." required />
             </label>
             <div className="form-grid">
               <label>
-                Category
-                <select value={form.category} onChange={update('category')}>
-                  {categories.map((category) => <option key={category}>{category}</option>)}
-                </select>
+                Offer starts
+                <input type="datetime-local" value={form.startTime} onChange={update('startTime')} required />
               </label>
               <label>
-                Quantity
-                <input type="number" min="1" value={form.quantity} onChange={update('quantity')} required />
-              </label>
-              <label>
-                Offer price
-                <input type="number" min="0" step="0.01" value={form.price} onChange={update('price')} required />
-              </label>
-              <label>
-                Original price
-                <input type="number" min="0" step="0.01" value={form.original_price} onChange={update('original_price')} />
-              </label>
-              <label>
-                Pickup starts
-                <input type="datetime-local" value={form.pickup_start} onChange={update('pickup_start')} />
-              </label>
-              <label>
-                Pickup ends
-                <input type="datetime-local" value={form.pickup_end} onChange={update('pickup_end')} />
+                Offer ends
+                <input type="datetime-local" value={form.endTime} onChange={update('endTime')} required />
               </label>
             </div>
-            <label>
-              Image URL
-              <input value={form.image_url} onChange={update('image_url')} placeholder="https://…" />
-            </label>
             {error && <p className="form-error">{error}</p>}
             <button className="primary-wide" type="submit" disabled={saving}>
               <Plus size={16} /> {saving ? 'Posting…' : 'Post live offer'} <ArrowRight size={17} />
@@ -194,34 +177,34 @@ export function Dashboard() {
             ) : (
               <div className="dash-offers">
                 {offers.map((offer) => (
-                  <article key={offer.id} className="deal-card">
+                  <article key={offer.offer_id} className="deal-card">
                     <div
                       className="deal-image"
                       style={{
-                        backgroundImage: offer.image_url
-                          ? `linear-gradient(180deg, transparent 48%, rgba(18,35,17,.42)), url(${offer.image_url})`
+                        backgroundImage: store?.image
+                          ? `linear-gradient(180deg, transparent 48%, rgba(18,35,17,.42)), url(${store.image})`
                           : 'linear-gradient(180deg, #d9c27a, #63743d)'
                       }}
                     >
-                      <span className={`save-pill ${offer.is_active ? '' : 'paused'}`}>
-                        {offer.is_active ? 'Live' : 'Paused'}
+                      <span className={`save-pill ${offer.offer_completed ? 'paused' : ''}`}>
+                        {offer.offer_completed ? 'Completed' : 'Live'}
                       </span>
-                      <span className="left-pill">{offer.quantity} left</span>
+                      <span className="left-pill">{offer.views ?? 0} views</span>
                     </div>
                     <div className="deal-body">
                       <div className="shop-row">
-                        <span>{offer.category}</span>
-                        <span>${Number(offer.price).toFixed(2)}</span>
+                        <span>Posted {formatDateTime(offer.posted_time, 'recently')}</span>
                       </div>
-                      <h3>{offer.title}</h3>
-                      <p>{offer.description || 'No description yet.'}</p>
+                      <h3>{offer.offer_name || 'Surprise food offer'}</h3>
+                      <p>{offer.offer_description || (offer.offer_completed ? 'This offer is complete.' : 'Available for pickup.')}</p>
                       <div className="meta-row">
-                        <span><Clock3 size={15} />{formatWindow(offer.pickup_start, offer.pickup_end)}</span>
-                        <span><MapPin size={15} />{business?.city || 'Pickup at your shop'}</span>
+                        <span><Clock3 size={15} />Starts {formatDateTime(offer.offer_start_time, 'TBA')}</span>
+                        <span><Clock3 size={15} />{formatDateTime(offer.offer_end_time, 'End time TBA')}</span>
+                        <span><MapPin size={15} />{store?.address || 'Pickup at your shop'}</span>
                       </div>
                       <div className="price-row">
                         <button type="button" onClick={() => toggleActive(offer)}>
-                          {offer.is_active ? 'Pause' : 'Go live'}
+                          {offer.offer_completed ? 'Reopen' : 'Mark complete'}
                         </button>
                         <button type="button" className="danger-btn" onClick={() => removeOffer(offer)}>
                           <Trash2 size={15} /> Remove

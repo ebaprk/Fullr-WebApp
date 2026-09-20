@@ -1,12 +1,3 @@
-import { createClient } from '@supabase/supabase-js'
-
-// Replace these defaults or set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
-// in a local .env file. Never put a service-role key in a Vite application.
-export const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co'
-export const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key'
-
-export const isSupabaseConfigured =
-  supabaseUrl !== 'https://your-project.supabase.co' &&
-  supabaseAnonKey !== 'your-anon-key'
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Services and authentication must share one client so they also share the
+// signed-in session and the same configuration checks.
+export { isSupabaseConfigured, supabase } from '../lib/supabase'
