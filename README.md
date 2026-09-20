@@ -15,9 +15,13 @@ Build for production with `npm run build`.
 
 ## Supabase data model
 
-- `Users` has one profile row for each Supabase Auth account.
-- `Stores.owner_id` references `Users.id`; the store ID is a separate UUID.
+- `auth.users` holds every authenticated account.
+- `Users` holds business-owner profiles only; each web registration creates a
+  linked `Stores` record through `Stores.owner_id`.
 - `Offers.store_id` references `Stores.id`.
+
+Student-profile creation belongs to the separate iOS/mobile codebase. This web
+repository only creates and manages business-owner accounts and stores.
 
 ## Supabase offers
 

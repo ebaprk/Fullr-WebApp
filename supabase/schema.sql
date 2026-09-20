@@ -1,6 +1,6 @@
--- Fullr schema: mobile users can own zero or more stores; stores post offers.
--- Run this in the Supabase SQL Editor. It also migrates the earlier schema
--- where Stores.id was the same value as the owner's auth user ID.
+-- Fullr web schema: business-owner registrations create a Users profile and
+-- a linked store. This repository does not create or manage mobile/student
+-- profiles; run this in the Supabase SQL Editor.
 
 do $$
 begin
@@ -15,8 +15,8 @@ begin
 end;
 $$;
 
--- Every authenticated person has one user profile. Mobile-only users simply
--- have no related Stores rows.
+-- Users contains business-owner profiles only. A row is created for the web
+-- registration flow, and Stores.owner_id points at that business owner.
 create table if not exists public."Users" (
   id uuid primary key references auth.users (id) on delete cascade,
   registered_at timestamptz not null default now(),
@@ -45,23 +45,33 @@ alter table public."Stores" alter column address drop not null;
 alter table public."Stores" alter column description drop not null;
 alter table public."Stores" alter column image drop not null;
 
-insert into public."Users" (id, name, image)
-select
-  u.id,
-  coalesce(u.raw_user_meta_data->>'name', u.raw_user_meta_data->>'full_name'),
-  u.raw_user_meta_data->>'image'
-from auth.users as u
-on conflict (id) do nothing;
-
 -- A legacy store used its auth user ID as the store ID. Preserve it as the
--- owner only when that user profile exists. Stores without a valid owner are
--- orphaned records and are removed (their Offers cascade on delete).
+-- owner when its auth account still exists.
 update public."Stores" as s
 set owner_id = s.id
 where s.owner_id is null
   and exists (
-    select 1 from public."Users" as u where u.id = s.id
+    select 1 from auth.users as u where u.id = s.id
   );
+
+-- Backfill business-owner profiles only for existing store owners and web
+-- accounts. Other account types do not receive a Users profile here.
+insert into public."Users" (id, name, image)
+select
+  u.id,
+  coalesce(
+    u.raw_user_meta_data->>'name',
+    u.raw_user_meta_data->>'full_name',
+    u.raw_user_meta_data->>'store_name',
+    u.raw_user_meta_data->>'business_name'
+  ),
+  u.raw_user_meta_data->>'image'
+from auth.users as u
+where u.raw_user_meta_data->>'account_type' = 'store'
+   or exists (
+     select 1 from public."Stores" as s where s.owner_id = u.id
+   )
+on conflict (id) do nothing;
 
 delete from public."Stores" as s
 where s.owner_id is null
@@ -142,50 +152,60 @@ create index if not exists stores_owner_id_idx on public."Stores" (owner_id);
 create index if not exists offers_store_id_idx on public."Offers" (store_id);
 create index if not exists offers_posted_time_idx on public."Offers" (posted_time desc);
 
-create or replace function public.handle_new_user()
+create or replace function public.handle_new_store_owner()
 returns trigger
 language plpgsql
 security definer
 set search_path = public
 as $$
 begin
+  -- The web registration flow always creates both sides of the owner/store
+  -- relationship in this transaction. The trigger's WHEN clause guarantees
+  -- this function only runs for account_type = 'store'.
   insert into public."Users" (id, name, image)
   values (
     new.id,
-    coalesce(new.raw_user_meta_data->>'name', new.raw_user_meta_data->>'full_name'),
+    coalesce(
+      new.raw_user_meta_data->>'name',
+      new.raw_user_meta_data->>'full_name',
+      new.raw_user_meta_data->>'store_name',
+      new.raw_user_meta_data->>'business_name'
+    ),
     new.raw_user_meta_data->>'image'
   )
   on conflict (id) do nothing;
 
-  -- The web registration flow marks store-owner accounts explicitly.
-  if new.raw_user_meta_data->>'account_type' = 'store' then
-    insert into public."Stores" (owner_id, name, address, description, store_type, image)
-    values (
-      new.id,
-      coalesce(
-        new.raw_user_meta_data->>'store_name',
-        new.raw_user_meta_data->>'business_name',
-        'New store'
-      ),
-      new.raw_user_meta_data->>'address',
-      new.raw_user_meta_data->>'description',
-      case
-        when new.raw_user_meta_data->>'store_type' in ('Pantry', 'Business', 'Campus', 'Restaurant')
-          then new.raw_user_meta_data->>'store_type'
-        else 'Business'
-      end::public."StoreType",
-      new.raw_user_meta_data->>'image'
-    );
-  end if;
+  insert into public."Stores" (owner_id, name, address, description, store_type, image)
+  values (
+    new.id,
+    coalesce(
+      new.raw_user_meta_data->>'store_name',
+      new.raw_user_meta_data->>'business_name',
+      'New store'
+    ),
+    new.raw_user_meta_data->>'address',
+    new.raw_user_meta_data->>'description',
+    case
+      when new.raw_user_meta_data->>'store_type' in ('Pantry', 'Business', 'Campus', 'Restaurant')
+        then new.raw_user_meta_data->>'store_type'
+      else 'Business'
+    end::public."StoreType",
+    new.raw_user_meta_data->>'image'
+  );
 
   return new;
 end;
 $$;
 
+-- Keep store-owner provisioning independent of the mobile app's student
+-- trigger. PostgreSQL permits both triggers on auth.users.
 drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
+drop trigger if exists on_auth_store_owner_created on auth.users;
+create trigger on_auth_store_owner_created
   after insert on auth.users
-  for each row execute function public.handle_new_user();
+  for each row
+  when (new.raw_user_meta_data->>'account_type' = 'store')
+  execute function public.handle_new_store_owner();
 
 -- Add stores for existing web accounts only when they do not already own one.
 insert into public."Stores" (owner_id, name, address, description, store_type, image)
